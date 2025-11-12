@@ -1,56 +1,90 @@
-// Arrays para armazenar contas e entradas (carregados do localStorage)
-let contas = JSON.parse(localStorage.getItem('contas')) || [];
-let entradas = JSON.parse(localStorage.getItem('entradas')) || [];
-let chart; // Variável para o gráfico
+// Arrays locais para armazenar dados temporariamente (para cálculos rápidos)
+let contas = [];
+let entradas = [];
+let chart;
+
+// Função para carregar dados do Firestore
+async function carregarDados() {
+    try {
+        const contasSnapshot = await getDocs(collection(window.db, "contas"));
+        contas = contasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        const entradasSnapshot = await getDocs(collection(window.db, "entradas"));
+        entradas = entradasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        atualizarListaContas();
+        atualizarListaEntradas();
+    } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+    }
+}
 
 // Função para adicionar uma conta
-function adicionarConta() {
+async function adicionarConta() {
     const nome = document.getElementById('contaNome').value.trim();
     const valor = parseFloat(document.getElementById('contaValor').value);
     const data = document.getElementById('contaData').value;
     if (nome && !isNaN(valor) && valor > 0 && data) {
-        contas.push({ nome, valor, data, paga: false });
-        salvarDados();
-        atualizarListaContas();
-        limparCampos('contaNome', 'contaValor', 'contaData');
+        try {
+            await addDoc(collection(window.db, "contas"), { nome, valor, data, paga: false });
+            await carregarDados(); // Recarrega tudo
+            limparCampos('contaNome', 'contaValor', 'contaData');
+        } catch (error) {
+            console.error("Erro ao adicionar conta:", error);
+        }
     } else {
         alert('Preencha nome, valor e data válidos!');
     }
 }
 
 // Função para adicionar uma entrada
-function adicionarEntrada() {
+async function adicionarEntrada() {
     const nome = document.getElementById('entradaNome').value.trim();
     const valor = parseFloat(document.getElementById('entradaValor').value);
     if (nome && !isNaN(valor) && valor > 0) {
-        entradas.push({ nome, valor });
-        salvarDados();
-        atualizarListaEntradas();
-        limparCampos('entradaNome', 'entradaValor');
+        try {
+            await addDoc(collection(window.db, "entradas"), { nome, valor });
+            await carregarDados();
+            limparCampos('entradaNome', 'entradaValor');
+        } catch (error) {
+            console.error("Erro ao adicionar entrada:", error);
+        }
     } else {
         alert('Preencha nome e valor válidos!');
     }
 }
 
 // Função para marcar/desmarcar conta como paga
-function marcarPaga(index) {
-    contas[index].paga = !contas[index].paga;
-    salvarDados();
-    atualizarListaContas();
+async function marcarPaga(index) {
+    const conta = contas[index];
+    try {
+        await updateDoc(doc(window.db, "contas", conta.id), { paga: !conta.paga });
+        await carregarDados();
+    } catch (error) {
+        console.error("Erro ao atualizar conta:", error);
+    }
 }
 
 // Função para remover conta
-function removerConta(index) {
-    contas.splice(index, 1);
-    salvarDados();
-    atualizarListaContas();
+async function removerConta(index) {
+    const conta = contas[index];
+    try {
+        await deleteDoc(doc(window.db, "contas", conta.id));
+        await carregarDados();
+    } catch (error) {
+        console.error("Erro ao remover conta:", error);
+    }
 }
 
 // Função para remover entrada
-function removerEntrada(index) {
-    entradas.splice(index, 1);
-    salvarDados();
-    atualizarListaEntradas();
+async function removerEntrada(index) {
+    const entrada = entradas[index];
+    try {
+        await deleteDoc(doc(window.db, "entradas", entrada.id));
+        await carregarDados();
+    } catch (error) {
+        console.error("Erro ao remover entrada:", error);
+    }
 }
 
 // Função para atualizar a tabela de contas na tela
@@ -106,7 +140,6 @@ function atualizarSaldo() {
     const totalEmConta = totalEntradas - totalPagas;
     const spanTotalEmConta = document.getElementById('totalEmConta');
     spanTotalEmConta.textContent = totalEmConta.toFixed(2);
-    // Muda a cor baseado no valor
     if (totalEmConta > 1000) {
         spanTotalEmConta.style.color = 'green';
     } else {
@@ -120,7 +153,7 @@ function atualizarGrafico() {
     const totalNaoPagas = contas.filter(c => !c.paga).reduce((sum, c) => sum + c.valor, 0);
 
     if (chart) {
-        chart.destroy(); // Destroi o gráfico anterior
+        chart.destroy();
     }
 
     const ctx = document.getElementById('chartGastos').getContext('2d');
@@ -130,7 +163,7 @@ function atualizarGrafico() {
             labels: ['Pagas (R$)', 'Não Pagas (R$)'],
             datasets: [{
                 data: [totalPagas, totalNaoPagas],
-                backgroundColor: ['#34c759', '#ff3b30'], // Verde para pagas, vermelho para não pagas
+                backgroundColor: ['#34c759', '#ff3b30'],
                 borderColor: ['#ffffff', '#ffffff'],
                 borderWidth: 2
             }]
@@ -155,17 +188,10 @@ function atualizarGrafico() {
     });
 }
 
-// Função para salvar dados no localStorage
-function salvarDados() {
-    localStorage.setItem('contas', JSON.stringify(contas));
-    localStorage.setItem('entradas', JSON.stringify(entradas));
-}
-
 // Função auxiliar para limpar campos de input
 function limparCampos(...ids) {
     ids.forEach(id => document.getElementById(id).value = '');
 }
 
-// Inicializar a página carregando listas
-atualizarListaContas();
-atualizarListaEntradas();
+// Inicializar carregando dados do Firestore
+carregarDados();

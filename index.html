@@ -5,9 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rastreador de Contas</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Biblioteca para gráfico -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // Substitua pelas suas credenciais do Firebase
+       const firebaseConfig = {
+  apiKey: "AIzaSyBb5dSqb1zTduDXgRKi4GeFUvG3J4Vr_wU",
+  authDomain: "rastreadorcontas-f4274.firebaseapp.com",
+  projectId: "rastreadorcontas-f4274",
+  storageBucket: "rastreadorcontas-f4274.firebasestorage.app",
+  messagingSenderId: "521030963391",
+  appId: "1:521030963391:web:7c1246a5dcbcf06a92360a",
+  measurementId: "G-W75BJCGJ1M"
+};
+
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app); // Torna o db acessível globalmente
+    </script>
 </head>
 <body>
+    <!-- O resto do HTML permanece igual -->
     <h1>Rastreador de Contas e Entradas</h1>
     
     <section id="adicionar-conta">
