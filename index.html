@@ -5,9 +5,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Rastreador de Contas</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Centraliza o login */
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f5f5f5;
+      font-family: Arial, sans-serif;
+    }
+
+    #login {
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 300px;
+    }
+
+    #login img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%; /* Deixa circular */
+      object-fit: cover;  /* Mantém proporção da imagem */
+      margin-bottom: 20px;
+      border: 2px solid #ccc;
+    }
+
+    #login input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    #login button {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 5px;
+      background-color: #34c759;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #login button:hover {
+      background-color: #28a745;
+    }
+
+    #mensagem {
+      color: red;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
   <section id="login">
+    <!-- Imagem circular no topo -->
+    <img src="ft1.jpeg" alt="Avatar do usuário">
+
     <h1>Login</h1>
     <input type="email" id="email" placeholder="E-mail" required>
     <input type="password" id="senha" placeholder="Senha" required>
