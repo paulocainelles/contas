@@ -1,6 +1,7 @@
 // ---------------- Firebase Setup ----------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 // Configuração do Firebase
 const firebaseConfig = {
@@ -16,13 +17,21 @@ const firebaseConfig = {
 // Inicializa Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
+
+let contas = [];
+let entradas = [];
+let uid = null;
 
 // ---------------- Proteção da página ----------------
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "index.html"; // volta para login
   } else {
+    uid = user.uid;
     console.log("Usuário logado:", user.email);
+    carregarContas();
+    carregarEntradas();
   }
 });
 
@@ -36,20 +45,62 @@ btnLogout.onclick = async () => {
 };
 document.body.prepend(btnLogout);
 
-// ---------------- Dados iniciais ----------------
-let contas = JSON.parse(localStorage.getItem("contas") || "[]");
-let entradas = JSON.parse(localStorage.getItem("entradas") || "[]");
+// ---------------- Funções Firestore ----------------
 
-// ---------------- Funções ----------------
+// Contas
+async function carregarContas() {
+  const contasRef = collection(db, "usuarios", uid, "contas");
+  onSnapshot(contasRef, (snapshot) => {
+    contas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    atualizarTabela();
+    atualizarEntradas();
+    atualizarGrafico();
+  });
+}
 
-// Atualiza a tabela de contas
+async function adicionarContaFirestore(nome, valor) {
+  await addDoc(collection(db, "usuarios", uid, "contas"), { nome, valor, paga: false });
+}
+
+async function alternarStatusConta(contaId, paga) {
+  const contaRef = doc(db, "usuarios", uid, "contas", contaId);
+  await updateDoc(contaRef, { paga });
+}
+
+async function removerContaFirestore(contaId) {
+  const contaRef = doc(db, "usuarios", uid, "contas", contaId);
+  await deleteDoc(contaRef);
+}
+
+// Entradas
+async function carregarEntradas() {
+  const entradasRef = collection(db, "usuarios", uid, "entradas");
+  onSnapshot(entradasRef, (snapshot) => {
+    entradas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    atualizarEntradas();
+    atualizarTabela();
+  });
+}
+
+async function adicionarEntradaFirestore(nome, valor) {
+  await addDoc(collection(db, "usuarios", uid, "entradas"), { nome, valor });
+}
+
+async function removerEntradaFirestore(entradaId) {
+  const entradaRef = doc(db, "usuarios", uid, "entradas", entradaId);
+  await deleteDoc(entradaRef);
+}
+
+// ---------------- Funções de UI ----------------
+
+// Atualiza tabela de contas
 function atualizarTabela() {
   const tbody = document.querySelector("#tabelaContas tbody");
   tbody.innerHTML = "";
   let totalNaoPagas = 0;
   let totalPagas = 0;
 
-  contas.forEach((conta, index) => {
+  contas.forEach((conta) => {
     const tr = document.createElement("tr");
 
     const tdNome = document.createElement("td");
@@ -64,29 +115,15 @@ function atualizarTabela() {
 
     const tdAcoes = document.createElement("td");
 
-    // Botão alternar status
     const btnStatus = document.createElement("button");
     btnStatus.textContent = conta.paga ? "Marcar como Não Paga" : "Marcar como Paga";
     btnStatus.className = conta.paga ? "btn-nao-paga btn-status" : "btn-paga btn-status";
-    btnStatus.onclick = () => {
-      conta.paga = !conta.paga;
-      localStorage.setItem("contas", JSON.stringify(contas));
-      atualizarTabela();
-      atualizarEntradas();
-      atualizarGrafico();
-    };
+    btnStatus.onclick = () => alternarStatusConta(conta.id, !conta.paga);
 
-    // Botão remover
     const btnRemover = document.createElement("button");
     btnRemover.textContent = "Remover";
     btnRemover.className = "btn-remover";
-    btnRemover.onclick = () => {
-      contas.splice(index, 1);
-      localStorage.setItem("contas", JSON.stringify(contas));
-      atualizarTabela();
-      atualizarEntradas();
-      atualizarGrafico();
-    };
+    btnRemover.onclick = () => removerContaFirestore(conta.id);
 
     tdAcoes.appendChild(btnStatus);
     tdAcoes.appendChild(btnRemover);
@@ -106,70 +143,54 @@ function atualizarTabela() {
   document.getElementById("totalEmConta").textContent = (entradas.reduce((acc, e) => acc + e.valor, 0) - totalPagas).toFixed(2);
 }
 
-// Adicionar nova conta
-window.adicionarConta = function() {
-  const nome = document.getElementById("contaNome").value.trim();
-  const valor = parseFloat(document.getElementById("contaValor").value);
-
-  if (!nome || isNaN(valor)) return alert("Preencha nome e valor corretamente.");
-
-  contas.push({ nome, valor, paga: false });
-  localStorage.setItem("contas", JSON.stringify(contas));
-  document.getElementById("contaNome").value = "";
-  document.getElementById("contaValor").value = "";
-
-  atualizarTabela();
-  atualizarEntradas();
-  atualizarGrafico();
-};
-
 // Atualiza lista de entradas
 function atualizarEntradas() {
   const lista = document.getElementById("listaEntradas");
   lista.innerHTML = "";
   let totalEntradas = 0;
 
-  entradas.forEach((entrada, index) => {
+  entradas.forEach((entrada) => {
     const li = document.createElement("li");
     li.textContent = `${entrada.nome} - R$ ${entrada.valor.toFixed(2)}`;
 
     const btnRemover = document.createElement("button");
     btnRemover.textContent = "Remover";
     btnRemover.className = "btn-remover";
-    btnRemover.onclick = () => {
-      entradas.splice(index, 1);
-      localStorage.setItem("entradas", JSON.stringify(entradas));
-      atualizarEntradas();
-      atualizarTabela();
-    };
+    btnRemover.onclick = () => removerEntradaFirestore(entrada.id);
 
     li.appendChild(btnRemover);
     lista.appendChild(li);
+
     totalEntradas += entrada.valor;
   });
 
   document.getElementById("totalEntradas").textContent = totalEntradas.toFixed(2);
 
-  // Atualiza saldo
   const totalNaoPagas = contas.reduce((acc, c) => acc + (!c.paga ? c.valor : 0), 0);
   document.getElementById("saldo").textContent = (totalEntradas - totalNaoPagas).toFixed(2);
 }
 
-// Adicionar nova entrada
-window.adicionarEntrada = function() {
+// ---------------- Eventos globais ----------------
+window.adicionarConta = async function() {
+  const nome = document.getElementById("contaNome").value.trim();
+  const valor = parseFloat(document.getElementById("contaValor").value);
+
+  if (!nome || isNaN(valor)) return alert("Preencha nome e valor corretamente.");
+
+  await adicionarContaFirestore(nome, valor);
+  document.getElementById("contaNome").value = "";
+  document.getElementById("contaValor").value = "";
+};
+
+window.adicionarEntrada = async function() {
   const nome = document.getElementById("entradaNome").value.trim();
   const valor = parseFloat(document.getElementById("entradaValor").value);
 
   if (!nome || isNaN(valor)) return alert("Preencha nome e valor corretamente.");
 
-  entradas.push({ nome, valor });
-  localStorage.setItem("entradas", JSON.stringify(entradas));
+  await adicionarEntradaFirestore(nome, valor);
   document.getElementById("entradaNome").value = "";
   document.getElementById("entradaValor").value = "";
-
-  atualizarEntradas();
-  atualizarTabela();
-  atualizarGrafico();
 };
 
 // ---------------- Gráfico ----------------
@@ -195,14 +216,7 @@ function atualizarGrafico() {
     chart = new Chart(ctx, {
       type: 'pie',
       data: data,
-      options: {
-        responsive: true
-      }
+      options: { responsive: true }
     });
   }
 }
-
-// ---------------- Inicialização ----------------
-atualizarTabela();
-atualizarEntradas();
-atualizarGrafico();
