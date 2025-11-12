@@ -18,7 +18,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // ---------------- Proteção da página ----------------
-// Redireciona se usuário não estiver logado
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "index.html"; // volta para login
@@ -37,52 +36,173 @@ btnLogout.onclick = async () => {
 };
 document.body.prepend(btnLogout);
 
-// ---------------- Lógica do Rastreador ----------------
-// Exemplo de lógica do seu rastreador (substitua pelo seu código real)
-const contas = JSON.parse(localStorage.getItem("contas") || "[]");
-const lista = document.createElement('ul');
-document.body.appendChild(lista);
+// ---------------- Dados iniciais ----------------
+let contas = JSON.parse(localStorage.getItem("contas") || "[]");
+let entradas = JSON.parse(localStorage.getItem("entradas") || "[]");
 
-function atualizarLista() {
-  lista.innerHTML = "";
+// ---------------- Funções ----------------
+
+// Atualiza a tabela de contas
+function atualizarTabela() {
+  const tbody = document.querySelector("#tabelaContas tbody");
+  tbody.innerHTML = "";
+  let totalNaoPagas = 0;
+  let totalPagas = 0;
+
   contas.forEach((conta, index) => {
-    const li = document.createElement('li');
-    li.textContent = `${conta.nome} - R$ ${conta.valor.toFixed(2)}`;
-    const btnExcluir = document.createElement('button');
-    btnExcluir.textContent = "Excluir";
-    btnExcluir.onclick = () => {
+    const tr = document.createElement("tr");
+
+    const tdNome = document.createElement("td");
+    tdNome.textContent = conta.nome;
+
+    const tdValor = document.createElement("td");
+    tdValor.textContent = conta.valor.toFixed(2);
+
+    const tdStatus = document.createElement("td");
+    tdStatus.textContent = conta.paga ? "Paga" : "Não Paga";
+    tdStatus.className = conta.paga ? "paga" : "nao-paga";
+
+    const tdAcoes = document.createElement("td");
+
+    // Botão alternar status
+    const btnStatus = document.createElement("button");
+    btnStatus.textContent = conta.paga ? "Marcar como Não Paga" : "Marcar como Paga";
+    btnStatus.className = conta.paga ? "btn-nao-paga btn-status" : "btn-paga btn-status";
+    btnStatus.onclick = () => {
+      conta.paga = !conta.paga;
+      localStorage.setItem("contas", JSON.stringify(contas));
+      atualizarTabela();
+      atualizarEntradas();
+      atualizarGrafico();
+    };
+
+    // Botão remover
+    const btnRemover = document.createElement("button");
+    btnRemover.textContent = "Remover";
+    btnRemover.className = "btn-remover";
+    btnRemover.onclick = () => {
       contas.splice(index, 1);
       localStorage.setItem("contas", JSON.stringify(contas));
-      atualizarLista();
+      atualizarTabela();
+      atualizarEntradas();
+      atualizarGrafico();
     };
-    li.appendChild(btnExcluir);
-    lista.appendChild(li);
+
+    tdAcoes.appendChild(btnStatus);
+    tdAcoes.appendChild(btnRemover);
+
+    tr.appendChild(tdNome);
+    tr.appendChild(tdValor);
+    tr.appendChild(tdStatus);
+    tr.appendChild(tdAcoes);
+
+    tbody.appendChild(tr);
+
+    if (conta.paga) totalPagas += conta.valor;
+    else totalNaoPagas += conta.valor;
   });
+
+  document.getElementById("totalDespesas").textContent = totalNaoPagas.toFixed(2);
+  document.getElementById("totalEmConta").textContent = (entradas.reduce((acc, e) => acc + e.valor, 0) - totalPagas).toFixed(2);
 }
 
-atualizarLista();
-
 // Adicionar nova conta
-const inputNome = document.createElement('input');
-inputNome.placeholder = "Nome da conta";
-const inputValor = document.createElement('input');
-inputValor.placeholder = "Valor";
-inputValor.type = "number";
-const btnAdicionar = document.createElement('button');
-btnAdicionar.textContent = "Adicionar Conta";
+window.adicionarConta = function() {
+  const nome = document.getElementById("contaNome").value.trim();
+  const valor = parseFloat(document.getElementById("contaValor").value);
 
-btnAdicionar.onclick = () => {
-  const nome = inputNome.value.trim();
-  const valor = parseFloat(inputValor.value);
-  if (nome && !isNaN(valor)) {
-    contas.push({ nome, valor });
-    localStorage.setItem("contas", JSON.stringify(contas));
-    atualizarLista();
-    inputNome.value = "";
-    inputValor.value = "";
-  }
+  if (!nome || isNaN(valor)) return alert("Preencha nome e valor corretamente.");
+
+  contas.push({ nome, valor, paga: false });
+  localStorage.setItem("contas", JSON.stringify(contas));
+  document.getElementById("contaNome").value = "";
+  document.getElementById("contaValor").value = "";
+
+  atualizarTabela();
+  atualizarEntradas();
+  atualizarGrafico();
 };
 
-document.body.appendChild(inputNome);
-document.body.appendChild(inputValor);
-document.body.appendChild(btnAdicionar);
+// Atualiza lista de entradas
+function atualizarEntradas() {
+  const lista = document.getElementById("listaEntradas");
+  lista.innerHTML = "";
+  let totalEntradas = 0;
+
+  entradas.forEach((entrada, index) => {
+    const li = document.createElement("li");
+    li.textContent = `${entrada.nome} - R$ ${entrada.valor.toFixed(2)}`;
+
+    const btnRemover = document.createElement("button");
+    btnRemover.textContent = "Remover";
+    btnRemover.className = "btn-remover";
+    btnRemover.onclick = () => {
+      entradas.splice(index, 1);
+      localStorage.setItem("entradas", JSON.stringify(entradas));
+      atualizarEntradas();
+      atualizarTabela();
+    };
+
+    li.appendChild(btnRemover);
+    lista.appendChild(li);
+    totalEntradas += entrada.valor;
+  });
+
+  document.getElementById("totalEntradas").textContent = totalEntradas.toFixed(2);
+
+  // Atualiza saldo
+  const totalNaoPagas = contas.reduce((acc, c) => acc + (!c.paga ? c.valor : 0), 0);
+  document.getElementById("saldo").textContent = (totalEntradas - totalNaoPagas).toFixed(2);
+}
+
+// Adicionar nova entrada
+window.adicionarEntrada = function() {
+  const nome = document.getElementById("entradaNome").value.trim();
+  const valor = parseFloat(document.getElementById("entradaValor").value);
+
+  if (!nome || isNaN(valor)) return alert("Preencha nome e valor corretamente.");
+
+  entradas.push({ nome, valor });
+  localStorage.setItem("entradas", JSON.stringify(entradas));
+  document.getElementById("entradaNome").value = "";
+  document.getElementById("entradaValor").value = "";
+
+  atualizarEntradas();
+  atualizarTabela();
+  atualizarGrafico();
+};
+
+// ---------------- Gráfico ----------------
+let chart = null;
+function atualizarGrafico() {
+  const ctx = document.getElementById('chartGastos').getContext('2d');
+  const totalPagas = contas.filter(c => c.paga).reduce((acc, c) => acc + c.valor, 0);
+  const totalNaoPagas = contas.filter(c => !c.paga).reduce((acc, c) => acc + c.valor, 0);
+
+  const data = {
+    labels: ['Pagas', 'Não Pagas'],
+    datasets: [{
+      label: 'Contas em R$',
+      data: [totalPagas, totalNaoPagas],
+      backgroundColor: ['#34c759', '#ff3b30']
+    }]
+  };
+
+  if (chart) {
+    chart.data = data;
+    chart.update();
+  } else {
+    chart = new Chart(ctx, {
+      type: 'pie',
+      data: data,
+      options: {
+        responsive: true
+      }
+    });
+  }
+}
+
+// ---------------- Inicialização ----------------
+atualizarTabela();
+atualizarEntradas();
+atualizarGrafico();
