@@ -1,17 +1,38 @@
-// Arrays locais para armazenar dados temporariamente (para cálculos rápidos)
+// --- Importações Firebase ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+import { 
+    getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc 
+} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+// --- Configuração Firebase ---
+const firebaseConfig = {
+  apiKey: "AIzaSyBb5dSqb1zTduDXgRKi4GeFUvG3J4Vr_wU",
+  authDomain: "rastreadorcontas-f4274.firebaseapp.com",
+  projectId: "rastreadorcontas-f4274",
+  storageBucket: "rastreadorcontas-f4274.firebasestorage.app",
+  messagingSenderId: "521030963391",
+  appId: "1:521030963391:web:7c1246a5dcbcf06a92360a",
+  measurementId: "G-W75BJCGJ1M"
+};
+
+// --- Inicialização Firebase ---
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// --- Variáveis globais ---
 let contas = [];
 let entradas = [];
 let chart;
 
-// Função para carregar dados do Firestore
+// --- Carregar dados ---
 async function carregarDados() {
     try {
-        const contasSnapshot = await getDocs(collection(window.db, "contas"));
+        const contasSnapshot = await getDocs(collection(db, "contas"));
         contas = contasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        const entradasSnapshot = await getDocs(collection(window.db, "entradas"));
+
+        const entradasSnapshot = await getDocs(collection(db, "entradas"));
         entradas = entradasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
+
         atualizarListaContas();
         atualizarListaEntradas();
     } catch (error) {
@@ -19,15 +40,16 @@ async function carregarDados() {
     }
 }
 
-// Função para adicionar uma conta
+// --- Adicionar conta ---
 async function adicionarConta() {
     const nome = document.getElementById('contaNome').value.trim();
     const valor = parseFloat(document.getElementById('contaValor').value);
     const data = document.getElementById('contaData').value;
+
     if (nome && !isNaN(valor) && valor > 0 && data) {
         try {
-            await addDoc(collection(window.db, "contas"), { nome, valor, data, paga: false });
-            await carregarDados(); // Recarrega tudo
+            await addDoc(collection(db, "contas"), { nome, valor, data, paga: false });
+            await carregarDados();
             limparCampos('contaNome', 'contaValor', 'contaData');
         } catch (error) {
             console.error("Erro ao adicionar conta:", error);
@@ -37,13 +59,14 @@ async function adicionarConta() {
     }
 }
 
-// Função para adicionar uma entrada
+// --- Adicionar entrada ---
 async function adicionarEntrada() {
     const nome = document.getElementById('entradaNome').value.trim();
     const valor = parseFloat(document.getElementById('entradaValor').value);
+
     if (nome && !isNaN(valor) && valor > 0) {
         try {
-            await addDoc(collection(window.db, "entradas"), { nome, valor });
+            await addDoc(collection(db, "entradas"), { nome, valor });
             await carregarDados();
             limparCampos('entradaNome', 'entradaValor');
         } catch (error) {
@@ -54,44 +77,45 @@ async function adicionarEntrada() {
     }
 }
 
-// Função para marcar/desmarcar conta como paga
+// --- Marcar conta como paga/não paga ---
 async function marcarPaga(index) {
     const conta = contas[index];
     try {
-        await updateDoc(doc(window.db, "contas", conta.id), { paga: !conta.paga });
+        await updateDoc(doc(db, "contas", conta.id), { paga: !conta.paga });
         await carregarDados();
     } catch (error) {
         console.error("Erro ao atualizar conta:", error);
     }
 }
 
-// Função para remover conta
+// --- Remover conta ---
 async function removerConta(index) {
     const conta = contas[index];
     try {
-        await deleteDoc(doc(window.db, "contas", conta.id));
+        await deleteDoc(doc(db, "contas", conta.id));
         await carregarDados();
     } catch (error) {
         console.error("Erro ao remover conta:", error);
     }
 }
 
-// Função para remover entrada
+// --- Remover entrada ---
 async function removerEntrada(index) {
     const entrada = entradas[index];
     try {
-        await deleteDoc(doc(window.db, "entradas", entrada.id));
+        await deleteDoc(doc(db, "entradas", entrada.id));
         await carregarDados();
     } catch (error) {
         console.error("Erro ao remover entrada:", error);
     }
 }
 
-// Função para atualizar a tabela de contas na tela
+// --- Atualizar lista de contas ---
 function atualizarListaContas() {
     const tbody = document.querySelector('#tabelaContas tbody');
     tbody.innerHTML = '';
     let totalDespesas = 0;
+
     contas.forEach((conta, index) => {
         const tr = document.createElement('tr');
         tr.className = conta.paga ? 'paga' : 'nao-paga';
@@ -108,16 +132,18 @@ function atualizarListaContas() {
         tbody.appendChild(tr);
         if (!conta.paga) totalDespesas += conta.valor;
     });
+
     document.getElementById('totalDespesas').textContent = totalDespesas.toFixed(2);
     atualizarSaldo();
     atualizarGrafico();
 }
 
-// Função para atualizar a lista de entradas na tela
+// --- Atualizar lista de entradas ---
 function atualizarListaEntradas() {
     const lista = document.getElementById('listaEntradas');
     lista.innerHTML = '';
     let totalEntradas = 0;
+
     entradas.forEach((entrada, index) => {
         const li = document.createElement('li');
         li.innerHTML = `
@@ -127,34 +153,31 @@ function atualizarListaEntradas() {
         lista.appendChild(li);
         totalEntradas += entrada.valor;
     });
+
     document.getElementById('totalEntradas').textContent = totalEntradas.toFixed(2);
     atualizarSaldo();
 }
 
-// Função para calcular e atualizar o saldo e o total em conta
+// --- Atualizar saldos ---
 function atualizarSaldo() {
     const totalEntradas = entradas.reduce((sum, e) => sum + e.valor, 0);
     const totalDespesas = contas.filter(c => !c.paga).reduce((sum, c) => sum + c.valor, 0);
     const totalPagas = contas.filter(c => c.paga).reduce((sum, c) => sum + c.valor, 0);
+
     document.getElementById('saldo').textContent = (totalEntradas - totalDespesas).toFixed(2);
+
     const totalEmConta = totalEntradas - totalPagas;
     const spanTotalEmConta = document.getElementById('totalEmConta');
     spanTotalEmConta.textContent = totalEmConta.toFixed(2);
-    if (totalEmConta > 1000) {
-        spanTotalEmConta.style.color = 'green';
-    } else {
-        spanTotalEmConta.style.color = 'orange';
-    }
+    spanTotalEmConta.style.color = totalEmConta > 1000 ? 'green' : 'orange';
 }
 
-// Função para atualizar o gráfico de porcentagem de contas pagas
+// --- Atualizar gráfico ---
 function atualizarGrafico() {
     const totalPagas = contas.filter(c => c.paga).reduce((sum, c) => sum + c.valor, 0);
     const totalNaoPagas = contas.filter(c => !c.paga).reduce((sum, c) => sum + c.valor, 0);
 
-    if (chart) {
-        chart.destroy();
-    }
+    if (chart) chart.destroy();
 
     const ctx = document.getElementById('chartGastos').getContext('2d');
     chart = new Chart(ctx, {
@@ -171,15 +194,13 @@ function atualizarGrafico() {
         options: {
             responsive: true,
             plugins: {
-                legend: {
-                    position: 'bottom'
-                },
+                legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: (ctx) => {
                             const total = totalPagas + totalNaoPagas;
-                            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
-                            return `${context.label}: R$ ${context.parsed.toFixed(2)} (${percentage}%)`;
+                            const perc = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                            return `${ctx.label}: R$ ${ctx.parsed.toFixed(2)} (${perc}%)`;
                         }
                     }
                 }
@@ -188,10 +209,16 @@ function atualizarGrafico() {
     });
 }
 
-// Função auxiliar para limpar campos de input
+// --- Função auxiliar ---
 function limparCampos(...ids) {
     ids.forEach(id => document.getElementById(id).value = '');
 }
 
-// Inicializar carregando dados do Firestore
+// --- Inicializar ---
+window.adicionarConta = adicionarConta;
+window.adicionarEntrada = adicionarEntrada;
+window.marcarPaga = marcarPaga;
+window.removerConta = removerConta;
+window.removerEntrada = removerEntrada;
+
 carregarDados();
