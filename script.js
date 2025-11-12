@@ -42,9 +42,8 @@ async function carregarDados() {
 
 // --- Adicionar conta ---
 async function adicionarConta() {
-    const nome = document.getElementById('contaNome').value.trim();
-    const valor = parseFloat(document.getElementById('contaValor').value);
-    const data = document.getElementById('contaData').value;
+   const nome = document.getElementById('nome').value;
+   const valor = parseFloat(document.getElementById('valor').value);
 
     if (nome && !isNaN(valor) && valor > 0 && data) {
         try {
@@ -120,15 +119,17 @@ function atualizarListaContas() {
         const tr = document.createElement('tr');
         tr.className = conta.paga ? 'paga' : 'nao-paga';
         tr.innerHTML = `
-            <td>${conta.nome}</td>
-            <td>R$ ${conta.valor.toFixed(2)}</td>
-            <td>${conta.data}</td>
-            <td>${conta.paga ? 'Pago' : 'Não Pago'}</td>
-            <td>
-                <button onclick="marcarPaga(${index})">${conta.paga ? 'Desmarcar' : 'Marcar Paga'}</button>
-                <button onclick="removerConta(${index})">Remover</button>
-            </td>
-        `;
+    <td>${conta.nome}</td>
+    <td>R$ ${conta.valor.toFixed(2)}</td>
+    <td>${conta.paga ? 'Pago' : 'Não Pago'}</td>
+    <td>
+        <button class="btn-status ${conta.paga ? 'btn-nao-paga' : 'btn-paga'}" onclick="marcarPaga(${index})">
+            ${conta.paga ? 'Marcar como Não Paga' : 'Marcar como Paga'}
+        </button>
+        <button class="btn-remover" onclick="removerConta(${index})">Remover</button>
+    </td>
+`;
+
         tbody.appendChild(tr);
         if (!conta.paga) totalDespesas += conta.valor;
     });
