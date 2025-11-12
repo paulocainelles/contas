@@ -1,31 +1,34 @@
 // Arrays para armazenar contas e entradas (carregados do localStorage)
 let contas = JSON.parse(localStorage.getItem('contas')) || [];
 let entradas = JSON.parse(localStorage.getItem('entradas')) || [];
+let chart; // Variável para o gráfico
 
 // Função para adicionar uma conta
 function adicionarConta() {
     const nome = document.getElementById('contaNome').value.trim();
     const valor = parseFloat(document.getElementById('contaValor').value);
-    if (nome && !isNaN(valor) && valor > 0) {
-        contas.push({ nome, valor, paga: false });
+    const data = document.getElementById('contaData').value;
+    if (nome && !isNaN(valor) && valor > 0 && data) {
+        contas.push({ nome, valor, data, paga: false });
         salvarDados();
         atualizarListaContas();
-        limparCampos('contaNome', 'contaValor');
+        limparCampos('contaNome', 'contaValor', 'contaData');
     } else {
-        alert('Preencha nome e valor válidos!');
+        alert('Preencha nome, valor e data válidos!');
     }
 }
 
 // Função para adicionar uma entrada
 function adicionarEntrada() {
+    const nome = document.getElementById('entradaNome').value.trim();
     const valor = parseFloat(document.getElementById('entradaValor').value);
-    if (!isNaN(valor) && valor > 0) {
-        entradas.push({ valor });
+    if (nome && !isNaN(valor) && valor > 0) {
+        entradas.push({ nome, valor });
         salvarDados();
         atualizarListaEntradas();
-        limparCampos('entradaValor');
+        limparCampos('entradaNome', 'entradaValor');
     } else {
-        alert('Preencha um valor válido!');
+        alert('Preencha nome e valor válidos!');
     }
 }
 
@@ -61,6 +64,7 @@ function atualizarListaContas() {
         tr.innerHTML = `
             <td>${conta.nome}</td>
             <td>R$ ${conta.valor.toFixed(2)}</td>
+            <td>${conta.data}</td>
             <td>${conta.paga ? 'Pago' : 'Não Pago'}</td>
             <td>
                 <button onclick="marcarPaga(${index})">${conta.paga ? 'Desmarcar' : 'Marcar Paga'}</button>
@@ -72,6 +76,7 @@ function atualizarListaContas() {
     });
     document.getElementById('totalDespesas').textContent = totalDespesas.toFixed(2);
     atualizarSaldo();
+    atualizarGrafico();
 }
 
 // Função para atualizar a lista de entradas na tela
@@ -82,7 +87,7 @@ function atualizarListaEntradas() {
     entradas.forEach((entrada, index) => {
         const li = document.createElement('li');
         li.innerHTML = `
-            R$ ${entrada.valor.toFixed(2)}
+            ${entrada.nome}: R$ ${entrada.valor.toFixed(2)}
             <button onclick="removerEntrada(${index})">Remover</button>
         `;
         lista.appendChild(li);
@@ -92,11 +97,62 @@ function atualizarListaEntradas() {
     atualizarSaldo();
 }
 
-// Função para calcular e atualizar o saldo
+// Função para calcular e atualizar o saldo e o total em conta
 function atualizarSaldo() {
     const totalEntradas = entradas.reduce((sum, e) => sum + e.valor, 0);
     const totalDespesas = contas.filter(c => !c.paga).reduce((sum, c) => sum + c.valor, 0);
+    const totalPagas = contas.filter(c => c.paga).reduce((sum, c) => sum + c.valor, 0);
     document.getElementById('saldo').textContent = (totalEntradas - totalDespesas).toFixed(2);
+    const totalEmConta = totalEntradas - totalPagas;
+    const spanTotalEmConta = document.getElementById('totalEmConta');
+    spanTotalEmConta.textContent = totalEmConta.toFixed(2);
+    // Muda a cor baseado no valor
+    if (totalEmConta > 1000) {
+        spanTotalEmConta.style.color = 'green';
+    } else {
+        spanTotalEmConta.style.color = 'orange';
+    }
+}
+
+// Função para atualizar o gráfico de porcentagem de contas pagas
+function atualizarGrafico() {
+    const totalPagas = contas.filter(c => c.paga).reduce((sum, c) => sum + c.valor, 0);
+    const totalNaoPagas = contas.filter(c => !c.paga).reduce((sum, c) => sum + c.valor, 0);
+
+    if (chart) {
+        chart.destroy(); // Destroi o gráfico anterior
+    }
+
+    const ctx = document.getElementById('chartGastos').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Pagas (R$)', 'Não Pagas (R$)'],
+            datasets: [{
+                data: [totalPagas, totalNaoPagas],
+                backgroundColor: ['#34c759', '#ff3b30'], // Verde para pagas, vermelho para não pagas
+                borderColor: ['#ffffff', '#ffffff'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = totalPagas + totalNaoPagas;
+                            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                            return `${context.label}: R$ ${context.parsed.toFixed(2)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 // Função para salvar dados no localStorage

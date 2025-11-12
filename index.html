@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rastreador de Contas</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Biblioteca para gráfico -->
 </head>
 <body>
     <h1>Rastreador de Contas e Entradas</h1>
@@ -13,12 +14,14 @@
         <h2>Adicionar Conta</h2>
         <input type="text" id="contaNome" placeholder="Nome da conta (ex.: Luz)">
         <input type="number" id="contaValor" placeholder="Valor (ex.: 100)">
+        <input type="date" id="contaData" placeholder="Data (ex.: 2023-10-01)">
         <button onclick="adicionarConta()">Adicionar Conta</button>
     </section>
     
     <section id="adicionar-entrada">
         <h2>Adicionar Entrada Mensal</h2>
-        <input type="number" id="entradaValor" placeholder="Valor da entrada (ex.: 500)">
+        <input type="text" id="entradaNome" placeholder="Nome da entrada (ex.: Salário)">
+        <input type="number" id="entradaValor" placeholder="Valor (ex.: 500)">
         <button onclick="adicionarEntrada()">Adicionar Entrada</button>
     </section>
     
@@ -29,6 +32,7 @@
                 <tr>
                     <th>Nome</th>
                     <th>Valor</th>
+                    <th>Data</th>
                     <th>Status</th>
                     <th>Ações</th>
                 </tr>
@@ -43,6 +47,12 @@
         <ul id="listaEntradas"></ul>
         <p>Total Entradas: R$ <span id="totalEntradas">0</span></p>
         <p>Saldo (Entradas - Despesas não pagas): R$ <span id="saldo">0</span></p>
+        <p>Total em Conta (Entradas - Contas Pagas): R$ <span id="totalEmConta" class="total-em-conta">0</span></p>
+    </section>
+    
+    <section id="grafico">
+        <h2>Gráfico de Porcentagem de Contas Pagas (em R$)</h2>
+        <canvas id="chartGastos" width="400" height="200"></canvas>
     </section>
     
     <script src="script.js"></script>

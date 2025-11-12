@@ -77,7 +77,7 @@ input {
     border: 1px solid #c7c7cc; /* Borda cinza iOS */
     border-radius: 8px; /* Arredondado */
     width: 100%;
-    max-width: 250px;
+    max-width: 200px;
     font-size: 16px; /* Evita zoom no iOS */
     background-color: #ffffff;
     transition: border-color 0.3s;
@@ -179,8 +179,9 @@ th {
     }
     td:nth-child(1):before { content: "Nome:"; }
     td:nth-child(2):before { content: "Valor:"; }
-    td:nth-child(3):before { content: "Status:"; }
-    td:nth-child(4):before { content: "Ações:"; }
+    td:nth-child(3):before { content: "Data:"; }
+    td:nth-child(4):before { content: "Status:"; }
+    td:nth-child(5):before { content: "Ações:"; }
 }
 
 /* Lista de entradas iOS-like */
@@ -206,6 +207,18 @@ p {
     margin-top: 15px;
     text-align: center;
     color: #007aff;
+}
+
+/* Classe para o Total em Conta com cores dinâmicas */
+.total-em-conta {
+    font-weight: bold;
+    transition: color 0.3s;
+}
+
+/* Gráfico */
+#chartGastos {
+    max-width: 100%;
+    height: auto;
 }
 
 /* Ajustes finais para mobile */
