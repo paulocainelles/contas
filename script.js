@@ -1,10 +1,8 @@
-// --- Importações Firebase ---
+// ---------------- Firebase Setup ----------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import {
-  getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
-// --- Configuração Firebase ---
+// Configuração do Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBb5dSqb1zTduDXgRKi4GeFUvG3J4Vr_wU",
   authDomain: "rastreadorcontas-f4274.firebaseapp.com",
@@ -15,215 +13,76 @@ const firebaseConfig = {
   measurementId: "G-W75BJCGJ1M"
 };
 
-// --- Inicialização Firebase ---
+// Inicializa Firebase
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const auth = getAuth(app);
 
-// --- Variáveis globais ---
-let contas = [];
-let entradas = [];
-let chart;
-
-// --- Carregar dados iniciais ---
-async function carregarDados() {
-  try {
-    const contasSnapshot = await getDocs(collection(db, "contas"));
-    contas = contasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    const entradasSnapshot = await getDocs(collection(db, "entradas"));
-    entradas = entradasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    atualizarListaContas();
-    atualizarListaEntradas();
-  } catch (error) {
-    console.error("Erro ao carregar dados:", error);
-  }
-}
-
-// --- Adicionar conta ---
-async function adicionarConta() {
-  const nome = document.getElementById('contaNome').value.trim();
-  const valor = parseFloat(document.getElementById('contaValor').value);
-
-  if (nome && !isNaN(valor) && valor > 0) {
-    try {
-      await addDoc(collection(db, "contas"), { nome, valor, paga: false });
-      await carregarDados();
-      limparCampos('contaNome', 'contaValor');
-    } catch (error) {
-      console.error("Erro ao adicionar conta:", error);
-      alert("Erro ao adicionar conta.");
-    }
+// ---------------- Proteção da página ----------------
+// Redireciona se usuário não estiver logado
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.href = "index.html"; // volta para login
   } else {
-    alert('Preencha nome e valor válidos!');
+    console.log("Usuário logado:", user.email);
   }
-}
+});
 
-// --- Adicionar entrada ---
-async function adicionarEntrada() {
-  const nome = document.getElementById('entradaNome').value.trim();
-  const valor = parseFloat(document.getElementById('entradaValor').value);
+// ---------------- Botão de Logout ----------------
+const btnLogout = document.createElement('button');
+btnLogout.textContent = "Sair";
+btnLogout.style.margin = "10px";
+btnLogout.onclick = async () => {
+  await signOut(auth);
+  window.location.href = "index.html";
+};
+document.body.prepend(btnLogout);
 
-  if (nome && !isNaN(valor) && valor > 0) {
-    try {
-      await addDoc(collection(db, "entradas"), { nome, valor });
-      await carregarDados();
-      limparCampos('entradaNome', 'entradaValor');
-    } catch (error) {
-      console.error("Erro ao adicionar entrada:", error);
-      alert("Erro ao adicionar entrada.");
-    }
-  } else {
-    alert('Preencha nome e valor válidos!');
-  }
-}
+// ---------------- Lógica do Rastreador ----------------
+// Exemplo de lógica do seu rastreador (substitua pelo seu código real)
+const contas = JSON.parse(localStorage.getItem("contas") || "[]");
+const lista = document.createElement('ul');
+document.body.appendChild(lista);
 
-// --- Marcar conta como paga/não paga ---
-async function marcarPaga(index) {
-  const conta = contas[index];
-  try {
-    await updateDoc(doc(db, "contas", conta.id), { paga: !conta.paga });
-    await carregarDados();
-  } catch (error) {
-    console.error("Erro ao atualizar conta:", error);
-  }
-}
-
-// --- Remover conta ---
-async function removerConta(index) {
-  const conta = contas[index];
-  try {
-    await deleteDoc(doc(db, "contas", conta.id));
-    await carregarDados();
-  } catch (error) {
-    console.error("Erro ao remover conta:", error);
-  }
-}
-
-// --- Remover entrada ---
-async function removerEntrada(index) {
-  const entrada = entradas[index];
-  try {
-    await deleteDoc(doc(db, "entradas", entrada.id));
-    await carregarDados();
-  } catch (error) {
-    console.error("Erro ao remover entrada:", error);
-  }
-}
-
-// --- Atualizar lista de contas ---
-function atualizarListaContas() {
-  const tbody = document.querySelector('#tabelaContas tbody');
-  tbody.innerHTML = '';
-  let totalDespesas = 0;
-
+function atualizarLista() {
+  lista.innerHTML = "";
   contas.forEach((conta, index) => {
-    const tr = document.createElement('tr');
-    tr.className = conta.paga ? 'paga' : 'nao-paga';
-    tr.innerHTML = `
-      <td>${conta.nome}</td>
-      <td>R$ ${conta.valor.toFixed(2)}</td>
-      <td>${conta.paga ? 'Pago' : 'Não Pago'}</td>
-      <td>
-        <button class="btn-status ${conta.paga ? 'btn-nao-paga' : 'btn-paga'}" onclick="marcarPaga(${index})">
-          ${conta.paga ? 'Marcar como Não Paga' : 'Marcar como Paga'}
-        </button>
-        <button class="btn-remover" onclick="removerConta(${index})">Remover</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-    if (!conta.paga) totalDespesas += conta.valor;
-  });
-
-  document.getElementById('totalDespesas').textContent = totalDespesas.toFixed(2);
-  atualizarSaldo();
-  atualizarGrafico();
-}
-
-// --- Atualizar lista de entradas ---
-function atualizarListaEntradas() {
-  const lista = document.getElementById('listaEntradas');
-  lista.innerHTML = '';
-  let totalEntradas = 0;
-
-  entradas.forEach((entrada, index) => {
     const li = document.createElement('li');
-    li.innerHTML = `
-      ${entrada.nome}: R$ ${entrada.valor.toFixed(2)}
-      <button onclick="removerEntrada(${index})">Remover</button>
-    `;
+    li.textContent = `${conta.nome} - R$ ${conta.valor.toFixed(2)}`;
+    const btnExcluir = document.createElement('button');
+    btnExcluir.textContent = "Excluir";
+    btnExcluir.onclick = () => {
+      contas.splice(index, 1);
+      localStorage.setItem("contas", JSON.stringify(contas));
+      atualizarLista();
+    };
+    li.appendChild(btnExcluir);
     lista.appendChild(li);
-    totalEntradas += entrada.valor;
-  });
-
-  document.getElementById('totalEntradas').textContent = totalEntradas.toFixed(2);
-  atualizarSaldo();
-}
-
-// --- Atualizar saldos ---
-function atualizarSaldo() {
-  const totalEntradas = entradas.reduce((sum, e) => sum + e.valor, 0);
-  const totalDespesas = contas.filter(c => !c.paga).reduce((sum, c) => sum + c.valor, 0);
-  const totalPagas = contas.filter(c => c.paga).reduce((sum, c) => sum + c.valor, 0);
-
-  // Saldo = Entradas - Despesas não pagas
-  document.getElementById('saldo').textContent = (totalEntradas - totalDespesas).toFixed(2);
-
-  // Total em conta = Entradas - Contas pagas
-  const totalEmConta = totalEntradas - totalPagas;
-  const spanTotalEmConta = document.getElementById('totalEmConta');
-  spanTotalEmConta.textContent = totalEmConta.toFixed(2);
-  spanTotalEmConta.style.color = totalEmConta > 1000 ? 'green' : 'orange';
-}
-
-// --- Atualizar gráfico ---
-function atualizarGrafico() {
-  const totalPagas = contas.filter(c => c.paga).reduce((sum, c) => sum + c.valor, 0);
-  const totalNaoPagas = contas.filter(c => !c.paga).reduce((sum, c) => sum + c.valor, 0);
-
-  if (chart) chart.destroy();
-
-  const ctx = document.getElementById('chartGastos').getContext('2d');
-  chart = new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: ['Pagas (R$)', 'Não Pagas (R$)'],
-      datasets: [{
-        data: [totalPagas, totalNaoPagas],
-        backgroundColor: ['#34c759', '#ff3b30'],
-        borderColor: ['#ffffff', '#ffffff'],
-        borderWidth: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'bottom' },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const total = totalPagas + totalNaoPagas;
-              const perc = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
-              return `${ctx.label}: R$ ${ctx.parsed.toFixed(2)} (${perc}%)`;
-            }
-          }
-        }
-      }
-    }
   });
 }
 
-// --- Função auxiliar ---
-function limparCampos(...ids) {
-  ids.forEach(id => document.getElementById(id).value = '');
-}
+atualizarLista();
 
-// --- Exportar funções para o HTML ---
-window.adicionarConta = adicionarConta;
-window.adicionarEntrada = adicionarEntrada;
-window.marcarPaga = marcarPaga;
-window.removerConta = removerConta;
-window.removerEntrada = removerEntrada;
+// Adicionar nova conta
+const inputNome = document.createElement('input');
+inputNome.placeholder = "Nome da conta";
+const inputValor = document.createElement('input');
+inputValor.placeholder = "Valor";
+inputValor.type = "number";
+const btnAdicionar = document.createElement('button');
+btnAdicionar.textContent = "Adicionar Conta";
 
-// --- Inicialização ---
-carregarDados();
+btnAdicionar.onclick = () => {
+  const nome = inputNome.value.trim();
+  const valor = parseFloat(inputValor.value);
+  if (nome && !isNaN(valor)) {
+    contas.push({ nome, valor });
+    localStorage.setItem("contas", JSON.stringify(contas));
+    atualizarLista();
+    inputNome.value = "";
+    inputValor.value = "";
+  }
+};
+
+document.body.appendChild(inputNome);
+document.body.appendChild(inputValor);
+document.body.appendChild(btnAdicionar);

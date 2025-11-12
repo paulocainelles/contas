@@ -1,63 +1,21 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rastreador de Contas</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Rastreador de Contas</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Rastreador de Contas e Entradas</h1>
+  <section id="login">
+    <h1>Login</h1>
+    <input type="email" id="email" placeholder="E-mail" required>
+    <input type="password" id="senha" placeholder="Senha" required>
+    <button id="btnLogin">Entrar</button>
+    <button id="btnCadastro">Cadastrar</button>
+    <p id="mensagem"></p>
+  </section>
 
-    <!-- Seção para adicionar conta -->
-    <section id="nova-conta">
-        <h2>Adicionar Conta</h2>
-        <input type="text" id="contaNome" placeholder="Nome da conta (ex.: Luz)" required>
-        <input type="number" id="contaValor" placeholder="Valor (R$)" required>
-        <button onclick="adicionarConta()">Adicionar Conta</button>
-    </section>
-
-    <!-- Tabela de contas -->
-    <section id="contas">
-        <h2>Contas</h2>
-        <table id="tabelaContas">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Valor</th>
-                    <th>Status</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <p>Total Despesas Não Pagas: R$ <span id="totalDespesas">0</span></p>
-    </section>
-
-    <!-- Seção para adicionar entrada -->
-    <section id="nova-entrada">
-        <h2>Adicionar Entrada</h2>
-        <input type="text" id="entradaNome" placeholder="Nome da entrada (ex.: Salário)" required>
-        <input type="number" id="entradaValor" placeholder="Valor (R$)" required>
-        <button onclick="adicionarEntrada()">Adicionar Entrada</button>
-    </section>
-
-    <!-- Lista de entradas -->
-    <section id="entradas">
-        <h2>Entradas Mensais</h2>
-        <ul id="listaEntradas"></ul>
-        <p>Total Entradas: R$ <span id="totalEntradas">0</span></p>
-        <p>Saldo (Entradas - Despesas não pagas): R$ <span id="saldo">0</span></p>
-        <p>Total em Conta (Entradas - Contas Pagas): R$ <span id="totalEmConta" class="total-em-conta">0</span></p>
-    </section>
-
-    <!-- Gráfico -->
-    <section id="grafico">
-        <h2>Gráfico de Porcentagem de Contas Pagas (em R$)</h2>
-        <canvas id="chartGastos" width="400" height="200"></canvas>
-    </section>
-
-    <script type="module" src="script.js"></script>
+  <script type="module" src="auth.js"></script>
 </body>
 </html>
