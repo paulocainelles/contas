@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rastreador de Contas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Rastreador de Contas e Entradas</h1>
+    
+    <section id="adicionar-conta">
+        <h2>Adicionar Conta</h2>
+        <input type="text" id="contaNome" placeholder="Nome da conta (ex.: Luz)">
+        <input type="number" id="contaValor" placeholder="Valor (ex.: 100)">
+        <button onclick="adicionarConta()">Adicionar Conta</button>
+    </section>
+    
+    <section id="adicionar-entrada">
+        <h2>Adicionar Entrada Mensal</h2>
+        <input type="number" id="entradaValor" placeholder="Valor da entrada (ex.: 500)">
+        <button onclick="adicionarEntrada()">Adicionar Entrada</button>
+    </section>
+    
+    <section id="contas">
+        <h2>Contas</h2>
+        <table id="tabelaContas">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <p>Total Despesas (Não pagas): R$ <span id="totalDespesas">0</span></p>
+    </section>
+    
+    <section id="entradas">
+        <h2>Entradas Mensais</h2>
+        <ul id="listaEntradas"></ul>
+        <p>Total Entradas: R$ <span id="totalEntradas">0</span></p>
+        <p>Saldo (Entradas - Despesas não pagas): R$ <span id="saldo">0</span></p>
+    </section>
+    
+    <script src="script.js"></script>
+</body>
+</html>
